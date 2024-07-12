@@ -1,0 +1,123 @@
+server:
+  port: 17000
+spring:
+  application:
+    name: "gateway"
+  data:
+    redis:
+      host: 47.108.64.26
+      port: 6379
+      password: CRWcrw200306
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+      routes:
+        - id: userServer
+          uri: lb://userServer
+          predicates:
+            - Path=/UserController/**
+        - id: businessServer
+          uri: lb://businessServer
+          predicates:
+            - Path=/BusinessController/**
+        - id: foodServer
+          uri: lb://foodServer
+          predicates:
+            - Path=/FoodController/**
+        - id: cartServer
+          uri: lb://cartServer
+          predicates:
+            - Path=/CartController/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@hostAddrKeyResolver}"
+                redis-rate-limiter:
+                  replenishRate: 1
+                  burstCapacity: 2
+        - id: deliveryServer
+          uri: lb://deliveryServer
+          predicates:
+            - Path=/DeliveryAddressController/**
+        - id: orderServer
+          uri: lb://orderServer
+          predicates:
+            - Path=/OrderController/**
+      default-filters:
+        - name: CircuitBreaker
+          args:
+            name: backendA
+            fallbackUri: forward:/fallback
+
+
+  #熔断器配置
+resilience4j:
+  circuitbreaker:
+    #    默认配置
+    configs:
+      default:
+        #        熔断器从打开到半开所需要的时间（ms）
+        wait-duration-in-open-state: 1000
+        #        熔断器打开的阈值
+        failure-rate-threshold: 1
+        #        事件缓冲区大小
+        event-consumer-buffer-size: 5
+        #        自动从打开到半开
+        automatic-transition-from-open-to-half-open-enabled: true
+        #        熔断时记录异常
+        record-exceptions: java.lang.Exception
+        #        健康检测机制
+        register-health-indicator: false
+        #        触发熔断机制的最小请求个数
+        minimum-number-of-calls: 1
+        #        半开时允许通过的请求个数，其实是剩余缓冲区个数
+        permitted-number-of-calls-in-half-open-state: 2
+    #        两个熔断器实例
+    instances:
+      backendA:
+        base-config: default
+      backendB:
+        base-config: default
+        #        会覆盖default中的配置
+        wait-duration-in-open-state: 3000
+        failure-rate-threshold: 15
+  ratelimiter:
+    configs:
+      default:
+        #在5秒内放5个令牌进入，不论什么时候放,即5s内限制五个访问
+        limit-for-period: 5
+        #
+        limit-refresh-period: 5000
+#         没有获得令牌等1s
+        timeout-duration: 1000
+    instances:
+      rate1:
+        base-config: default
+      rate2:
+        base-config: default
+        limit-for-period: 3
+
+eureka:
+  instance:
+    #    显示ip地址而不是机器名
+    prefer-ip-address: true
+    instance-id: "${spring.cloud.client.ip-address}:${server.port}"
+    #    15秒没有通信，那就被从服务中心注销
+    lease-expiration-duration-in-seconds: 15
+    #    每5秒通信一次，心跳
+    lease-renewal-interval-in-seconds: 5
+  client:
+    #    微服务注册中心的地址
+    service-url:
+      defaultZone: "http://eureka15000:15000/eureka/,http://eureka16000:16000/eureka/"
+
+elm:
+  jwt:
+    user-secret-key: chenruweichenruweichenruweichenruweichenruweichenruweichenruweichenruweichenruweichenruwei
+    user-ttl: 7200000
+    user-token-name: elmToken

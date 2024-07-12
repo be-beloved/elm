@@ -1,0 +1,39 @@
+server:
+  port: 19000
+spring:
+  rabbitmq:
+    stream:
+      host: localhost
+      port: 5672
+      username: guest
+      password: guest
+  application:
+    name: "configServer"
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://gitee.com/chenru_wei/elm_config.git #gitee地址
+          username: chenru_wei
+          password: CRWcrw200306
+          default-label: master #分支
+#暴露bus-refresh节点，通过此节点刷新配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: busrefresh
+
+
+eureka:
+  instance:
+    #    显示ip地址而不是机器名
+    prefer-ip-address: true
+    instance-id: "${spring.cloud.client.ip-address}:${server.port}"
+    #    15秒没有通信，那就被从服务中心注销
+    lease-expiration-duration-in-seconds: 15
+    #    每5秒通信一次，心跳
+    lease-renewal-interval-in-seconds: 5
+  client:
+    service-url:
+      defaultZone: "http://eureka15000:15000/eureka/,http://eureka16000:16000/eureka/"
